@@ -62,8 +62,8 @@ with conn:
             """,
             rows
         )
-
-        # 기존 데이터 삭제 + ID를 1부터 다시 시작
+ 
+        # ID를 1부터 다시 시작
         cur.execute("TRUNCATE TABLE FINANCIAL_BRANCHES RESTART IDENTITY")
 
         # 새 데이터로 교체
@@ -73,6 +73,8 @@ with conn:
             SELECT *
             FROM  BRANCH_STAGING
         """)
+
+        conn.commit()
 
 print(f"{len(rows)}개 행 저장 완료")
 conn.close()
