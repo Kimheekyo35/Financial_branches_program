@@ -1,5 +1,9 @@
 import streamlit as st
 import pandas as pd
+from rapidfuzz_file import find_bank_code, find_sql
+
+# find_bank_code 은 company_name 을 정규화한 후, bank_code 갖고오는 함수
+# find_sql 은 sql에서 데이터 찾고 유사도 점수까지 확인하는 함수
 
 # 크기 늘리기
 st.set_page_config(layout="wide")
@@ -46,18 +50,37 @@ if st.button("확인"):
     st.subheader("주소 검색 결과")
     
     # 입력받은 값을 각 행으로 출력하기
+    # records는 표를 딕셔너리 목록으로 바꾸라는 옵션
+
     for row_number, row in enumerate(
         cleaned_df.to_dict("records"),
-        start = 1
-    ):
+        start = 1):
 
     # 세 칸이 모두 빈 행이면 건너뛰기
         if not any(row.values()):
+            st.error("금융기관명, 지점명, 주소 를 입력하세요.")
             continue
         
         count += 1
 
-        with st.container(border=True):
-            st.write("입력 금융기관명: ",row["금융기관명"])
-            st.write("입력 지점명: ",row["지점명"])
-            st.write("입력 주소: ",row["주소"])
+        company_name, company_code = find_bank_code(row["금융기관명"])
+        db_address, score = find_sql(company_name, row["주소"],company_code)
+        score = float(score)
+
+        if score < 85:
+            st.error(
+                f"** 주소 일치 여부 확인요망**  \n"
+                f"입력 금융기관명: {row['금융기관명']}  \n"
+                f"입력 지점명: {row['지점명']}  \n"
+                f"입력 주소: {row['주소']}  \n"
+                f"DB 주소: {db_address}  \n"
+                f"유사도: {score:.1f}점"
+            )
+
+        else:
+            with st.container(border=True):
+                st.write("입력 금융기관명:", row["금융기관명"])
+                st.write("입력 지점명:", row["지점명"])
+                st.write("입력 주소:", row["주소"])
+                st.write("DB 주소:", db_address)
+                st.write(f"유사도: {score:.1f}점")

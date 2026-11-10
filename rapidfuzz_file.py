@@ -131,17 +131,9 @@ def find_sql(company_name, address, code):
                 }
 
     if best_match is None:
-        print("비교할 주소가 없습니다.")
-    elif best_match["score"] > threshold:
-        print("주소 유사도 기준을 통과했습니다.")
-        print("회사명: ",company_name)
-        print("입력 주소:", address)
-        print("가장 유사한 DB 주소:", best_match["address"])
-        print(f"주소 유사도: {best_match['score']:.1f}")
+        return None
     else:
-        print("주소 유사도 기준 미만입니다.")
-        print("가장 유사한 DB 주소: ", best_match['address'])
-        print(f"주소 유사도: {best_match['score']:.1f}")
+        return best_match['address'], f"{best_match['score']:.1f}"
 
 """
 test_rows = [
