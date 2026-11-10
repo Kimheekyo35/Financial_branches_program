@@ -110,7 +110,7 @@ def find_sql(company_name, address, code):
             )
             # 조회한 데이터를 branches 라는 변수에 저장하는 것
             branches = cur.fetchall()
-    # 주소 정규화
+    # 입력받은 주소 정규화
     normalized_input = normalize_address(address)
     best_match = None
     threshold = 85

@@ -14,3 +14,4 @@ truststore
 bs4
 psycopg2-binary
 dotenv
+gradio
