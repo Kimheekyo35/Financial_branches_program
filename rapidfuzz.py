@@ -143,7 +143,7 @@ def find_sql(company_name, address, code):
         print("가장 유사한 DB 주소: ", best_match['address'])
         print(f"주소 유사도: {best_match['score']:.1f}")
 
-
+"""
 test_rows = [
     {
         "company_name": "KB국민은행",
@@ -201,3 +201,5 @@ for row in test_rows:
     company_name, code = find_bank_code(row["company_name"])
     print(company_name,code)
     find_sql(company_name,row["address"],code)
+
+"""
