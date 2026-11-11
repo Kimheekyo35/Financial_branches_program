@@ -37,21 +37,22 @@ def normalize_branch_name(name):
 df["rapidfuzz_score"] = df.apply(lambda row:fuzz.ratio(normalize_branch_name(row["input_branch_name"]), row["reference_branch_name"]), axis=1)
 # df["norm_bank_nm"] = df.apply(lambda row: norm_company(row["input_bank_name"]), axis=1)
 
-df.to_csv(BASE/ "rapidfuzz_test_result.csv", index=False, encoding="utf-8-sig")
+# df.to_csv(BASE/ "rapidfuzz_test_result.csv", index=False, encoding="utf-8-sig")
 
-# result_csv = pd.read_csv(BASE / "rapidfuzz_test_result.csv", encoding="utf-8-sig")
+result_csv = pd.read_csv(BASE / "rapidfuzz_test_result.csv", encoding="utf-8-sig")
 # # result_head = result_csv.head()
 
-# # Precision, Recall, F1 Score 계산
+# Precision, Recall, F1 Score 계산
+print(result_csv.describe())
 
-# # for threshold in range(70,100,5):
-# #     pred = (result_csv["rapidfuzz_score"] >= threshold).astype(int)
+for threshold in range(70,100,5):
+    pred = (result_csv["rapidfuzz_score"] >= threshold).astype(int)
 
-# #     print(f"Threshold: {threshold}")
-# #     print(f"Precision: {precision_score(result_csv['actual_match'], pred)}")
-# #     print(f"Recall: {recall_score(result_csv['actual_match'], pred)}")
-# #     print(f"F1 Score: {f1_score(result_csv['actual_match'], pred)}")
-# #     print()
+    print(f"Threshold: {threshold}")
+    print(f"Precision: {precision_score(result_csv['branch_actual_match'], pred)}")
+    print(f"Recall: {recall_score(result_csv['branch_actual_match'], pred)}")
+    print(f"F1 Score: {f1_score(result_csv['branch_actual_match'], pred)}")
+    print()
 
 # df_csv = result_csv[["bank_name","input_branch_name","reference_branch_name","rapidfuzz_score"]]
 # print(df_csv.head())
