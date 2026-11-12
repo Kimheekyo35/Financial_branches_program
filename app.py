@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-from rapidfuzz_file import find_bank_code, find_sql
+from rapidfuzz_file import classify_match, find_bank_code, find_branch_match
 
 # find_bank_code 은 company_name 을 정규화한 후, bank_code 갖고오는 함수
-# find_sql 은 sql에서 데이터 찾고 유사도 점수까지 확인하는 함수
+# find_branch_match는 같은 DB 행의 지점명과 주소 점수를 반환한다.
 
 # 크기 늘리기
 st.set_page_config(layout="wide")
@@ -45,8 +45,6 @@ if st.button("확인"):
     for column in cleaned_df.columns:
         cleaned_df[column] = cleaned_df[column].str.strip()
 
-    count = 0
-
     st.subheader("주소 검색 결과")
     
     # 입력받은 값을 각 행으로 출력하기
@@ -56,31 +54,47 @@ if st.button("확인"):
         cleaned_df.to_dict("records"),
         start = 1):
 
-    # 세 칸이 모두 빈 행이면 건너뛰기
-        if not any(row.values()):
-            st.error("금융기관명, 지점명, 주소 를 입력하세요.")
+        if not row["금융기관명"]:
+            with st.container(border=True):
+                st.warning(f"{row_number} 행의 금융기관명을 입력하세요. ")
+                st.table(pd.DataFrame([row], index=["입력값"]))
             continue
-        
-        count += 1
+
+        if not all(row.values()):
+            with st.container(border=True):
+                st.warning(f"{row_number}행의 금융기관명, 지점명, 주소를 모두 입력하세요.")
+                comparison = pd.DataFrame([row], index=["입력값"])
+                st.table(comparison)
+            continue
 
         company_name, company_code = find_bank_code(row["금융기관명"])
-        db_address, score = find_sql(company_name, row["주소"],company_code)
-        score = float(score)
+        match = find_branch_match(row["지점명"], row["주소"], company_code)
 
-        if score < 85:
-            st.error(
-                f"** 주소 일치 여부 확인요망**  \n"
-                f"입력 금융기관명: {row['금융기관명']}  \n"
-                f"입력 지점명: {row['지점명']}  \n"
-                f"입력 주소: {row['주소']}  \n"
-                f"DB 주소: {db_address}  \n"
-                f"유사도: {score:.1f}점"
-            )
-
-        else:
+        if match is None:
             with st.container(border=True):
-                st.write("입력 금융기관명:", row["금융기관명"])
-                st.write("입력 지점명:", row["지점명"])
-                st.write("입력 주소:", row["주소"])
-                st.write("DB 주소:", db_address)
-                st.write(f"유사도: {score:.1f}점")
+                st.warning(f"{row_number}행의 비교할 DB 데이터를 찾지 못했습니다. 금융기관명을 확인하세요.")
+                comparison = pd.DataFrame([row], index=["입력값"])
+                st.table(comparison)
+            continue
+        status = classify_match(match["branch_score"], match["address_score"])
+        status_display = {
+            "자동 일치": st.success,
+            "일치 후보": st.info,
+            "지점명 검토 필요": st.warning,
+            "주소 검토 필요": st.warning,
+            "불일치": st.error,
+        }
+        with st.container(border=True):
+            status_display[status](f"**{status}**")
+            comparison = pd.DataFrame(
+                [
+                    row,
+                    {
+                        "금융기관명": match["bank_name"],
+                        "지점명": match["branch_name"],
+                        "주소": match["address"],
+                    },
+                ],
+                index=["입력값", "저장값"],
+            )
+            st.table(comparison)

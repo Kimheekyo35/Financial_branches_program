@@ -98,100 +98,85 @@ def find_bank_code(company_name):
 
     # OPENAI API 호출
 
-# code가 있는 경우 sql에서 bank_code와 code가 일치하는 것 찾고, address와 input_address 비교해야함
-def find_sql(company_name, address, code):
+def normalize_branch_name(name):
+    if pd.isna(name):
+        return ""
+
+    name = unicodedata.normalize("NFKC", str(name)).strip()
+    name = re.sub(r"[\s\-_/().]", "", name)
+
+    if name.endswith("지점"):
+        return name[:-2]
+    if name.endswith("점"):
+        return name[:-1]
+    return name
+
+
+def classify_match(branch_score, address_score):
+    if address_score >= 90 and branch_score >= 90:
+        return "자동 일치"
+    elif address_score >= 85 and branch_score >= 85:
+        return "일치 후보"
+    elif address_score >= 85:
+        return "지점명 검토 필요"
+    elif branch_score >= 85:
+        return "주소 검토 필요"
+    else:
+        return "불일치"
+
+
+def find_branch_match(branch_name, address, code):
+    if not code or not str(address).strip():
+        return None
+
     with conn:
         with conn.cursor() as cur:
-            cur.execute(f"""
-            SELECT branch_name, address
+            cur.execute("""
+            SELECT bank_name, branch_name, address
             FROM FINANCIAL_BRANCHES
-            WHERE bank_code = '{code}'
-            """
+            WHERE bank_code = %s
+            """,
+            (code,),
             )
             # 조회한 데이터를 branches 라는 변수에 저장하는 것
             branches = cur.fetchall()
     # 입력받은 주소 정규화
     normalized_input = normalize_address(address)
+    normalized_branch = normalize_branch_name(branch_name)
     best_match = None
-    threshold = 85
 
     if normalized_input:
-        for branch_name, db_address in branches:
+        for db_bank_name, db_branch_name, db_address in branches:
+            if not db_address:
+                continue
             normalized_db = normalize_address(db_address)
 
             if not normalized_db:
                 continue
             
-            score = fuzz.ratio(normalized_input,normalized_db)
+            address_score = fuzz.ratio(normalized_input, normalized_db)
+            normalized_db_branch = normalize_branch_name(db_branch_name)
+            branch_score = 0.0
+            if normalized_branch and normalized_db_branch:
+                branch_score = fuzz.ratio(normalized_branch, normalized_db_branch)
 
-            if best_match is None or score > best_match["score"]:
+            # 주소 점수가 가장 높은 행을 선택하고, 동점일 때 지점명으로 비교한다.
+            if best_match is None or (address_score, branch_score) > (
+                best_match["address_score"], best_match["branch_score"]
+            ):
                 best_match = {
+                    "bank_name": db_bank_name,
+                    "branch_name": db_branch_name,
                     "address": db_address,
-                    "score": score
+                    "branch_score": branch_score,
+                    "address_score": address_score,
                 }
 
-    if best_match is None:
+    return best_match
+
+
+def find_sql(company_name, address, code):
+    match = find_branch_match("", address, code)
+    if match is None:
         return None
-    else:
-        return best_match['address'], f"{best_match['score']:.1f}"
-
-"""
-test_rows = [
-    {
-        "company_name": "KB국민은행",
-        "branch_name": "K-2(점)",
-        "address": "대구광역시 동구 54 아양로 352",
-    },
-    {
-        "company_name": "신한은행",
-        "branch_name": "ASE코리아(출)",
-        "address": "제주특별자치도 서귀포시 테스트로 999",
-    },
-    {
-        "company_name": "우리은행",
-        "branch_name": "BIFC금융센터",
-        "address": "부산 남구 문현동 문현금융로 40",
-    },
-    {
-        "company_name": "하나은행",
-        "branch_name": "63빌딩",
-        "address": "강원특별자치도 춘천시 테스트길 888",
-    },
-    {
-        "company_name": "IBK기업은행",
-        "branch_name": "MBC",
-        "address": "서울특별시 마포구 상암동 성암로 267 1603",
-    },
-    {
-        "company_name": "NH농협은행",
-        "branch_name": "JDC첨단지점",
-        "address": "인천광역시 강화군 테스트로 777",
-    },
-    {
-        "company_name": "BNK부산은행",
-        "branch_name": "W스퀘어",
-        "address": "부산광역시 남구 (용호동) 566, 신선로",
-    },
-    {
-        "company_name": "iM뱅크(구 대구은행)",
-        "branch_name": "3공단영업부",
-        "address": "전라남도 목포시 테스트길 666",
-    },
-    {
-        "company_name": "엘에스증권",
-        "branch_name": "SC제일CYBER",
-        "address": "서울특별시 영등포구 여의나루로 60, 포스트타워 25층",
-    },
-    {
-        "company_name": "케이뱅크",
-        "branch_name": "Operation팀",
-        "address": "충청북도 충주시 테스트로 555",
-    },
-]
-
-for row in test_rows:
-    company_name, code = find_bank_code(row["company_name"])
-    print(company_name,code)
-    find_sql(company_name,row["address"],code)
-
-"""
+    return match["address"], f"{match['address_score']:.1f}"
