@@ -40,7 +40,11 @@ st.markdown(
     unsafe_allow_html=True)
 
 # 크기 늘리기
-st.set_page_config(layout="wide")
+# 57.151.98.166:8501 했을 때 streamlit -> 금융거래조회서 주소 검증 프로그램 으로 수정.
+st.set_page_config(
+    page_title="금융거래조회서 주소 검증 프로그램",
+    layout="wide",
+)
 
 search_mode = st.radio(
     "검색 방식",
@@ -49,14 +53,14 @@ search_mode = st.radio(
     key = "search_mode"
 )
 # 제목
-st.title("금융기관 주소 검사")
+st.title("금융거래조회서 주소 검증 프로그램")
 
 address_only = search_mode == "주소만 검색"
 input_columns = ["금융기관명", "주소"] if address_only else ["금융기관명", "지점명", "주소"]
 
 # 추가 설명
 st.write(f"{', '.join(input_columns)}를 헤더 없이 붙여넣고 **표에 넣기**를 누르세요. "
-         "아래 표에서 내용을 확인하거나 수정한 뒤 ‘확인’을 눌러주세요.")
+         f"아래 표에서 내용을 확인하거나 수정한 뒤 **확인**을 눌러주세요.")
 
 # 1. 세 열과 빈 행 30개 만들기
 initial_df = pd.DataFrame(
