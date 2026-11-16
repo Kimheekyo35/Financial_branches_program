@@ -3,7 +3,7 @@ from openai import OpenAI
 from pathlib import Path
 
 
-def call_openai(bank_name,branch_name=""):
+def call_openai(bank_name,branch_name="", address=""):
 
     load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -12,6 +12,8 @@ def call_openai(bank_name,branch_name=""):
     prompt = """
     너는 한국 금융기관의 위치를 조사하는 도우미다.
     입력된 금융기관명과 지점명에 해당하는 주소를 웹 검색으로 확인한다.
+    지점명 없이 주소가 입력되면 금융기관명과 입력 주소를 단서로 해당 지점을 확인한다.
+    이 경우 입력 주소를 검증되지 않은 검색 단서로 사용하고, 본점으로 가정하지 않는다.
 
     검색 및 검증 규칙:
     - 해당 금융기관의 공식 홈페이지를 우선 확인한다.
@@ -34,8 +36,12 @@ def call_openai(bank_name,branch_name=""):
     한국어로 간결하게 답한다.
     """
 
-    if not branch_name:
+    if not branch_name and not address:
         branch_name = "본점"
+
+    search_input = f"금융기관명: {bank_name}\n지점명: {branch_name}\n"
+    if address:
+        search_input += f"입력 주소: {address}\n"
 
     # web search 기능 필요
     response = client.responses.create(
@@ -49,8 +55,7 @@ def call_openai(bank_name,branch_name=""):
                 }}],
 
         
-        input=f"금융기관명: {bank_name}\n"
-              f"지점명: {branch_name}\n"
+        input=search_input,
 
         
     )

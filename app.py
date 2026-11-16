@@ -166,11 +166,11 @@ if st.button("확인"):
             continue
         if address_only:
             if match["address_score"] >= 90:
-                status = "주소 일치"
+                status = "자동 일치"
             elif match["address_score"] >= 85:
-                status = "주소 일치 후보"
+                status = "일치 후보"
             else:
-                status = "주소 검토 필요"
+                status = "불일치"
         else:
             status = classify_match(match["branch_score"], match["address_score"])
         status_display = {
@@ -179,8 +179,6 @@ if st.button("확인"):
             "지점명 검토 필요": st.warning,
             "주소 검토 필요": st.warning,
             "불일치": st.error,
-            "주소 일치": st.success,
-            "주소 일치 후보": st.info,
         }
         with st.container(border=True):
             status_display[status](f"**{status}**")
@@ -209,9 +207,6 @@ if st.button("확인"):
                     ).fillna("")
                 st.table(comparison)
 
-            if address_only:
-                st.caption(f"주소 유사도 {match['address_score']:.2f}점")
-
     if ai_jobs:
         # API 요청만 작업 스레드에서 실행하고, 화면은 메인 스레드에서 갱신한다.
         with st.spinner("🤖 AI로 지점 주소를 확인하고 있습니다 🤖"):
@@ -221,6 +216,7 @@ if st.button("확인"):
                         call_openai,
                         bank_name=row["금융기관명"],
                         branch_name=row.get("지점명", ""),
+                        **({"address": row["주소"]} if address_only else {}),
                     ): placeholder
                     for row, placeholder in ai_jobs
                 }
