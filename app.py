@@ -1,10 +1,12 @@
 import csv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import StringIO
 
 import streamlit as st
 import pandas as pd
 from rapidfuzz_file import classify_match, find_bank_code, find_branch_match
 
+from openai_test import call_openai
 # find_bank_code 은 company_name 을 정규화한 후, bank_code 갖고오는 함수
 # find_branch_match는 같은 DB 행의 지점명과 주소 점수를 반환한다.
 
@@ -130,6 +132,7 @@ if st.button("확인"):
         cleaned_df[column] = cleaned_df[column].str.strip()
 
     st.subheader("주소 검색 결과")
+    ai_jobs = []
     
     # 입력받은 값을 각 행으로 출력하기
     # records는 표를 딕셔너리 목록으로 바꾸라는 옵션
@@ -180,18 +183,57 @@ if st.button("확인"):
         }
         with st.container(border=True):
             status_display[status](f"**{status}**")
-            comparison = pd.DataFrame(
-                [
-                    row,
-                    {
-                        "금융기관명": match["bank_name"],
-                        "지점명": match["branch_name"],
-                        "주소": match["address"],
-                    },
-                ],
-                index=["입력값", "저장값"],
-                columns=["금융기관명", "지점명", "주소"],
-            ).fillna("")
-            st.table(comparison)
+            if status == "불일치":
+                comparison = pd.DataFrame(
+                    [row],
+                    index=["입력값"],
+                    columns=["금융기관명", "지점명", "주소"],
+                ).fillna("")
+                st.table(comparison)
+                result_placeholder = st.empty()
+                result_placeholder.info("🤖 AI 주소 검색 대기 중...")
+                ai_jobs.append((row, result_placeholder))
+            else:
+                comparison = pd.DataFrame(
+                        [
+                            row,
+                            {
+                                "금융기관명": match["bank_name"],
+                                "지점명": match["branch_name"],
+                                "주소": match["address"],
+                            },
+                        ],
+                        index=["입력값","저장값"],
+                        columns=["금융기관명", "지점명", "주소"],
+                    ).fillna("")
+                st.table(comparison)
+
             if address_only:
                 st.caption(f"주소 유사도 {match['address_score']:.2f}점")
+
+    if ai_jobs:
+        # API 요청만 작업 스레드에서 실행하고, 화면은 메인 스레드에서 갱신한다.
+        with st.spinner("🤖 AI로 지점 주소를 확인하고 있습니다 🤖"):
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = {
+                    executor.submit(
+                        call_openai,
+                        bank_name=row["금융기관명"],
+                        branch_name=row.get("지점명", ""),
+                    ): placeholder
+                    for row, placeholder in ai_jobs
+                }
+                for future in as_completed(futures):
+                    placeholder = futures[future]
+                    try:
+                        result = future.result()
+                    except Exception:
+                        placeholder.warning(
+                            "웹 주소 검색 중 오류가 발생했습니다. "
+                            "API 설정과 연결 상태를 확인하세요."
+                        )
+                    else:
+                        with placeholder.container():
+                            st.markdown("**웹 검색 결과**")
+                            st.markdown(result)
+                            st.markdown("AI로 생성한 결과물이니, 참고용으로 사용 부탁드립니다.")
