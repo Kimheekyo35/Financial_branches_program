@@ -3,3 +3,4 @@ financial_json_dir/
 .venv/
 __pycache__/
 node_modules/
+deploy/
