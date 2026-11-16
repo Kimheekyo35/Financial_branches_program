@@ -17,3 +17,4 @@ dotenv
 gradio
 streamlit
 openai
+msal

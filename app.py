@@ -10,7 +10,8 @@ from openai_test import call_openai
 # find_bank_code 은 company_name 을 정규화한 후, bank_code 갖고오는 함수
 # find_branch_match는 같은 DB 행의 지점명과 주소 점수를 반환한다.
 
-
+# microsoft 로그인
+import msal
 def parse_pasted_rows(text, columns=None):
     if columns is None:
         columns = ["금융기관명", "지점명", "주소"]
