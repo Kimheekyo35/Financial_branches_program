@@ -14,7 +14,7 @@ from openai_test import call_openai
 import msal
 def parse_pasted_rows(text, columns=None):
     if columns is None:
-        columns = ["금융기관명", "지점명", "주소"]
+        columns = ["금융기관명", "주소"]
     rows = []
     reader = csv.reader(StringIO(text), delimiter="\t")
     for values in reader:
@@ -51,7 +51,7 @@ st.set_page_config(
 
 search_mode = st.radio(
     "검색 방식",
-    ["지점명 + 주소 비교", "주소만 검색"],
+    ["주소만 검색"],
     horizontal=True,
     key = "search_mode"
 )
@@ -59,7 +59,7 @@ search_mode = st.radio(
 st.title("금융거래조회서 주소 검증 프로그램")
 
 address_only = search_mode == "주소만 검색"
-input_columns = ["금융기관명", "주소"] if address_only else ["금융기관명", "지점명", "주소"]
+input_columns = ["금융기관명", "주소"]
 
 # 추가 설명
 st.write(f"{', '.join(input_columns)}를 헤더 없이 붙여넣고 **표에 넣기**를 누르세요. "
@@ -134,7 +134,7 @@ if st.button("확인"):
 
     st.subheader("주소 검색 결과")
     ai_jobs = []
-    
+
     # 입력받은 값을 각 행으로 출력하기
     # records는 표를 딕셔너리 목록으로 바꾸라는 옵션
 
@@ -156,7 +156,7 @@ if st.button("확인"):
             continue
 
         company_name, company_code = find_bank_code(row["금융기관명"])
-        match = find_branch_match(row.get("지점명", ""), row["주소"], company_code)
+        match = find_branch_match(row.get("지점명",""),row["주소"], company_code)
 
         if match is None:
             with st.container(border=True):
@@ -164,19 +164,9 @@ if st.button("확인"):
                 comparison = pd.DataFrame([row], index=["입력값"])
                 st.table(comparison)
             continue
-        if address_only:
-            if match["address_score"] >= 90:
-                status = "자동 일치"
-            elif match["address_score"] >= 85:
-                status = "일치 후보"
-            else:
-                status = "불일치"
-        else:
-            status = classify_match(match["branch_score"], match["address_score"])
+        status = classify_match(match["address_score"])
         status_display = {
-            "자동 일치": st.success,
-            "일치 후보": st.info,
-            "지점명 검토 필요": st.warning,
+            "일치": st.success,
             "주소 검토 필요": st.warning,
             "불일치": st.error,
         }
@@ -186,7 +176,7 @@ if st.button("확인"):
                 comparison = pd.DataFrame(
                     [row],
                     index=["입력값"],
-                    columns=["금융기관명", "지점명", "주소"],
+                    columns=["금융기관명", "주소"],
                 ).fillna("")
                 st.table(comparison)
                 result_placeholder = st.empty()
@@ -198,39 +188,38 @@ if st.button("확인"):
                             row,
                             {
                                 "금융기관명": match["bank_name"],
-                                "지점명": match["branch_name"],
                                 "주소": match["address"],
                             },
                         ],
                         index=["입력값","저장값"],
-                        columns=["금융기관명", "지점명", "주소"],
+                        columns=["금융기관명", "주소"],
                     ).fillna("")
                 st.table(comparison)
 
     if ai_jobs:
         # API 요청만 작업 스레드에서 실행하고, 화면은 메인 스레드에서 갱신한다.
-        with st.spinner("🤖 AI로 지점 주소를 확인하고 있습니다 🤖"):
-            with ThreadPoolExecutor(max_workers=3) as executor:
-                futures = {
-                    executor.submit(
-                        call_openai,
-                        bank_name=row["금융기관명"],
-                        branch_name=row.get("지점명", ""),
-                        **({"address": row["주소"]} if address_only else {}),
-                    ): placeholder
-                    for row, placeholder in ai_jobs
-                }
-                for future in as_completed(futures):
-                    placeholder = futures[future]
-                    try:
-                        result = future.result()
-                    except Exception:
-                        placeholder.warning(
-                            "웹 주소 검색 중 오류가 발생했습니다. "
-                            "API 설정과 연결 상태를 확인하세요."
-                        )
-                    else:
-                        with placeholder.container():
-                            st.markdown("**웹 검색 결과**")
-                            st.markdown(result)
-                            st.markdown("AI로 생성한 결과물이니, 참고용으로 사용 부탁드립니다.")
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(
+                    call_openai,
+                    bank_name=row["금융기관명"],
+                    address = row["주소"]
+
+                ): placeholder
+                for row, placeholder in ai_jobs
+            }
+            for future in as_completed(futures):
+                placeholder = futures[future]
+                try:
+                    result = future.result()
+                except Exception:
+                    placeholder.warning(
+                        "웹 주소 검색 중 오류가 발생했습니다. "
+                        "API 설정과 연결 상태를 확인하세요."
+                    )
+                else:
+                    with placeholder.container():
+                        st.markdown("**웹 검색 결과**")
+                        st.markdown(result)
+                        st.markdown("AI로 생성한 결과물이니, 참고용으로 사용 부탁드립니다.")

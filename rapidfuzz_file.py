@@ -112,14 +112,10 @@ def normalize_branch_name(name):
     return name
 
 
-def classify_match(branch_score, address_score):
-    if address_score >= 90 and branch_score >= 90:
-        return "자동 일치"
-    elif address_score >= 85 and branch_score >= 85:
-        return "일치 후보"
+def classify_match(address_score):
+    if address_score >= 90:
+        return "일치"
     elif address_score >= 85:
-        return "지점명 검토 필요"
-    elif branch_score >= 85:
         return "주소 검토 필요"
     else:
         return "불일치"
