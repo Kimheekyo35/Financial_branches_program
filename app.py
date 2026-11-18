@@ -7,6 +7,7 @@ import pandas as pd
 from rapidfuzz_file import classify_match, find_bank_code, find_branch_match
 
 from openai_test import call_openai
+from chatbot import openai_chatbot
 # find_bank_code 은 company_name 을 정규화한 후, bank_code 갖고오는 함수
 # find_branch_match는 같은 DB 행의 지점명과 주소 점수를 반환한다.
 
@@ -48,6 +49,67 @@ st.set_page_config(
     page_title="금융거래조회서 주소 검증 프로그램",
     layout="wide",
 )
+
+
+@st.dialog("💬 주소 검증 도우미", width="medium")
+def show_chatbot():
+    st.caption("프로그램 사용법과 주소 검증에 대해 질문해 주세요.")
+    if "chatbot_messages" not in st.session_state:
+        st.session_state.chatbot_messages = []
+
+    if st.button("대화 지우기", key="clear_chatbot"):
+        st.session_state.chatbot_messages = []
+
+    with st.container(height=350):
+        for message in st.session_state.chatbot_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        prompt = st.chat_input("질문을 입력하세요", key="chatbot_input")
+        if prompt:
+            user_message = {"role": "user", "content": prompt}
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            with st.chat_message("assistant"):
+                try:
+                    with st.spinner("답변을 작성하고 있습니다..."):
+                        answer = openai_chatbot(
+                            st.session_state.chatbot_messages + [user_message]
+                        )
+                except Exception:
+                    st.error("답변을 가져오지 못했습니다. 잠시 후 다시 질문해 주세요.")
+                else:
+                    st.markdown(answer)
+                    st.session_state.chatbot_messages.extend([
+                        user_message,
+                        {"role": "assistant", "content": answer},
+                    ])
+
+
+st.markdown(
+    """
+    <style>
+    .st-key-chatbot_launcher {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        width: auto;
+        z-index: 1000;
+    }
+    .st-key-chatbot_launcher button {
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+with st.container(key="chatbot_launcher"):
+    if st.button("💬", key="open_chatbot", help="주소 검증 도우미 열기"):
+        show_chatbot()
 
 search_mode = st.radio(
     "검색 방식",
@@ -160,10 +222,12 @@ if st.button("확인"):
 
         if match is None:
             with st.container(border=True):
-                st.warnings(f"{row["금융기관명"]}의 주소를 검색합니다.")
-                # openai api 호출하기
+                st.warning(f"{row['금융기관명']}의 DB 후보가 없어 AI로 주소를 검색합니다.")
                 comparison = pd.DataFrame([row], index=["입력값"])
                 st.table(comparison)
+                result_placeholder = st.empty()
+                result_placeholder.info("🤖 AI 주소 검색 대기 중...")
+                ai_jobs.append((row, result_placeholder))
             continue
         status = classify_match(match["address_score"])
         status_display = {
