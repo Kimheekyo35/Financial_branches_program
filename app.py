@@ -160,7 +160,8 @@ if st.button("확인"):
 
         if match is None:
             with st.container(border=True):
-                st.warning(f"{row_number}행의 비교할 DB 데이터를 찾지 못했습니다. 금융기관명을 확인하세요.")
+                st.warnings(f"{row["금융기관명"]}의 주소를 검색합니다.")
+                # openai api 호출하기
                 comparison = pd.DataFrame([row], index=["입력값"])
                 st.table(comparison)
             continue
