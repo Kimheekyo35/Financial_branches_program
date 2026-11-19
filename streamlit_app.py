@@ -11,6 +11,36 @@ import pandas as pd
 from rapidfuzz_file import classify_match, find_bank_code, find_branch_match
 from openai_test import call_openai
 from chatbot import openai_chatbot
+
+import os
+import hmac
+from dotenv import load_dotenv
+
+load_dotenv()
+
+APP_PASSWORD = os.getenv("APP_PASSWORD")
+
+# 로그인 과정
+if not APP_PASSWORD:
+    st.error("APP_PASSWORD가 설정되어 있지 않습니다. ")
+    st.stop()
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("로그인")
+
+    password = st.text_input("비밀번호", type="password")
+
+    if st.button("입력"):
+        if hmac.compare_digest(password, APP_PASSWORD):
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("비밀번호가 올바르지 않습니다.")
+    
+    st.stop()
 # 1. 화면 설정·문구·디자인
 
 input_columns = ["금융기관명", "주소"]

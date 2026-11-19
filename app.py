@@ -13,7 +13,11 @@ from chatbot import openai_chatbot
 # find_branch_match는 같은 DB 행의 지점명과 주소 점수를 반환한다.
 
 # microsoft 로그인
-import msal
+import hmac
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def parse_pasted_rows(text, columns=None):
     if columns is None:
         columns = ["금융기관명", "주소"]
