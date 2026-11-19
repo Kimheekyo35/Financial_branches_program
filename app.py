@@ -1,4 +1,5 @@
 import csv
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import StringIO
 
@@ -77,6 +78,7 @@ def show_chatbot():
                             st.session_state.chatbot_messages + [user_message]
                         )
                 except Exception:
+                    logging.getLogger(__name__).exception("주소 검증 챗봇 응답 생성 실패")
                     st.error("답변을 가져오지 못했습니다. 잠시 후 다시 질문해 주세요.")
                 else:
                     st.markdown(answer)
@@ -108,7 +110,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 with st.container(key="chatbot_launcher"):
-    if st.button("💬", key="open_chatbot", help="주소 검증 도우미 열기"):
+    if st.button("💬", key="open_chatbot", help="주소 검증 챗봇 열기"):
         show_chatbot()
 
 search_mode = st.radio(

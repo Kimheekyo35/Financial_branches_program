@@ -15,22 +15,20 @@ from openai_test import call_openai
 input_columns = ["금융기관명", "주소"]
 text = {
     "title": "금융거래조회서 주소 검증",
-    "label": "EY 한영회계법인 · 금융기관 주소 검증",
-    "english_title": "Financial Institution Address Verification",
     "guide": (
-        "금융기관명, 주소를 붙여넣고 **표에 넣기**. "
-        "표에서 내용 확인 및 수정 후 **확인**."
+        "금융기관명, 주소를 붙여넣고 <strong>표에 넣기</strong>. "
+        "표에서 내용 검토 후 <strong>확인</strong>."
     ),
     "input_title": "데이터 입력",
-    "paste_label": "여러 건 붙여넣기",
-    "editor_label": "입력 내용 (수정 가능)",
+    "paste_label": "식별 주소 붙여넣기",
+    "editor_label": "입력 내용",
     "placeholder": (
         "국민은행 서울특별시 강남구 테헤란로 152\n"
         "신한은행 서울특별시 중구 세종대로 9"
     ),
     "paste_guide": (
-        "엑셀의 금융기관명·주소 두 열을 복사하거나, "
-        "금융기관명 내부 공백을 제거해주세요."
+        "엑셀의 금융기관명·주소 두 열을 복사해주세요. "
+        "금융기관명이 올바른지 확인해주세요."
     ),
     "paste_button": "표에 넣기",
     "confirm_button": "확인",
@@ -48,10 +46,10 @@ text = {
     "result_title": "주소 검색 결과",
     "result_count": "총 {count}건",
     "number_header": "No.",
-    "input_header": "입력한 값",
-    "db_header": "DB 매핑값",
-    "status_header": "결과",
-    "ai_title": "AI 검색 결과 · {number}행",
+    "input_header": "내가 확인하려는 주소",
+    "db_header": "프로그램이 찾은 주소",
+    "status_header": "검증 결과",
+    "ai_title": "AI 검색 결과",
     "ai_waiting": "AI 주소 검색 대기 중...",
     "ai_error": (
         "웹 주소 검색 중 오류가 발생했습니다. "
@@ -86,20 +84,20 @@ css = """
 <style>
 /* 1. 전체 화면 */
 .stApp {
-    background-color: #f5f6f8;
+    background-color: #eeeeee;
     color: #2e2e38;
 }
 .block-container {
     width: 100%;
     max-width: none;
-    padding: 1rem 24px 2rem;
+    padding: 3rem 24px 2rem;
 }
 /* 2. 상단 배너 */
 .brand-banner {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: 15px;
     background: linear-gradient(
         125deg,
         #202024 0%,
@@ -109,8 +107,8 @@ css = """
         #202024 78%
     );
     color: #ffffff;
-    padding: 22px 28px;
-    border-radius: 4px;
+    padding: 30px 32px;
+    border-radius: 1px;
     margin-bottom: 24px;
 }
 .brand-left {
@@ -120,36 +118,20 @@ css = """
 }
 .brand-ey {
     color: #ffffff;
-    font-size: 38px;
+    font-size: 20px;
     font-weight: 800;
     line-height: 1;
     border-top: 5px solid #ffe600;
-    padding-top: 7px;
+    padding-top: 9px;
 }
 .brand-name {
     font-size: 15px;
     font-weight: 600;
 }
-.brand-right {
-    font-size: 13px;
-    text-align: right;
-}
-.page-label {
-    color: #666672;
-    font-size: 14px;
-    border-left: 4px solid #ffe600;
-    padding-left: 10px;
-    margin-bottom: 8px;
-}
 
-.page-english {
-    color: #666672;
-    font-size: 13px;
-    margin-bottom: 6px;
-}
 /* 3. 입력·결과 영역 */
 [data-testid="stVerticalBlockBorderWrapper"] {
-    border-radius: 10px;
+    border-radius: 20px;
 }
 .section-heading {
     display: flex;
@@ -171,7 +153,7 @@ css = """
     font-weight: 700;
 }
 .section-title {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     color: #202024;
 }
@@ -225,28 +207,56 @@ div.stButton > button[kind="primary"]:hover {
 .result-table .row-number {
     text-align: center;
 }
-/* 6. 표 상단 제목*/
+/* 6. 결과표 상단 제목 */
 .result-table th.header-number,
+.result-table th.header-input,
+.result-table th.header-db,
+.result-table th.header-status {
+    background-color: #f0f1f3;
+    color: #2e2e38;
+    border-color: #000000;
+    border-top: 3px solid #C4C5C7;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 10px;
+}
 .result-table th.header-input {
-    background-color: #202024;
-    color: #ffffff;
-    border-color: #45454d;
+    border-top-color: #202024;
 }
 .result-table th.header-db {
-    background-color: #ffe600;
-    color: #202024;
-    border-color: #e0ca00;
+    border-top-color: #ffe600;
 }
-.result-table th.header-status {
-    background-color: #202024;
-    color: #ffe600;
-    border-color: #45454d;
-}
+
 /* 7. 금융기관명·주소 열 제목 */
 .result-table th.sub-input,
 .result-table th.sub-db {
-    background-color: #eceef2;
-    color: #2e2e38;
+    background-color: #fafafb;
+    color: #666672;
+    border-color: #000000;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 10px;
+}
+
+/* 표 내용: 번호·금융기관명·결과는 가운데 정렬 */
+.result-table td:nth-child(1),
+.result-table td:nth-child(2),
+.result-table td:nth-child(4),
+.result-table td:nth-child(6) {
+    text-align: center;
+}
+
+/* 긴 주소는 왼쪽 정렬 */
+.result-table td:nth-child(3),
+.result-table td:nth-child(5) {
+    text-align: left;
+}
+
+/* 결과 아이콘과 문구 정렬 */
+.result-table .status-label {
+    justify-content: center;
 }
 /* 8. 결과별 행 배경 */
 .result-table .row-review td {
@@ -297,7 +307,7 @@ div.stButton > button[kind="primary"]:hover {
 }
 .status-invalid {
     color: #666672;
-
+}
 .status-invalid .status-icon {
     background-color: #777783;
 }
@@ -305,6 +315,46 @@ div.stButton > button[kind="primary"]:hover {
 .result-table .db-difference {
     font-weight: 800;
     color: #922033;
+}
+/* 11. input박스 전체: 배경 + 테두리 두께 */
+.st-key-input_box {
+    background-color: #ffffff !important;
+    border: 2px solid #8a8a96 !important;
+    border-radius: 10px !important;
+}
+/* 12. result박스 전체: 배경 + 테두리 두께 */
+.st-key-result_box {
+    background-color: #ffffff !important;
+    border: 2px solid #8a8a96 !important;
+    border-radius: 10px !important;
+}
+/* 13. 배너 안 제목·안내문 */
+.brand-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 68%;   /* 오른쪽 노란 줄무늬와 안 겹치게 */
+}
+.brand-title {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.2;
+    border-left: 8px solid #ffe600;
+    padding-left: 14px;
+}
+.brand-guide {
+    font-size: 15px;
+    color: #e6e6ea;
+}
+.brand-guide strong {
+    color: #ffe600;
+}
+/* 14. AI 검색 결과 영역 */
+div[class*="st-key-ai_result_"] {
+    background-color: #FFFFF7;
+    border: 1px solid #FA8072;
+    border-radius: 8px;
+    padding: 16px 20px;
 }
 </style>
 """
@@ -354,28 +404,22 @@ if "pasted_text" not in st.session_state:
 
 # 3. 입력 화면 구성
 st.markdown(
-    """
+    f"""
     <div class="brand-banner">
-        <div class="brand-left">
-            <div class="brand-ey">EY</div>
-            <div class="brand-name">한영회계법인</div>
-        </div>
-        <div class="brand-right">
-            금융기관 주소 검증 프로그램
+        <div class="brand-content">
+            <div class="brand-left">
+                <div class="brand-ey">EY</div>
+                <div class="brand-name">한영회계법인 CoE_ADC</div>
+            </div>
+            <div class="brand-title">{escape(text["title"])}</div>
+            <div class="brand-guide">{text["guide"]}</div>
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-st.markdown(
-    f'<div class="page-label">{escape(text["label"])}</div>'
-    f'<div class="page-english">{escape(text["english_title"])}</div>',
-    unsafe_allow_html=True,
-)
-st.title(text["title"])
-st.write(text["guide"])
-with st.container(border=True):
+with st.container(border=True, key="input_box"):
     st.markdown(
         f"""
         <div class="section-heading">
@@ -565,7 +609,7 @@ def create_ai_placeholder(row_number):
         gap=None,
     )
     with ai_column:
-        with st.container(border=True):
+        with st.container(border=False, key=f"ai_result_{row_number}"):
             st.markdown(
                 f"**{text['ai_title'].format(number=row_number)}**"
             )
@@ -599,7 +643,7 @@ if confirmed:
     if cleaned_df.empty:
         st.warning(text["empty_input"])
     else:
-        with st.container(border=True):
+        with st.container(border=True, key="result_box"):
             st.markdown(
                 f"""
                 <div class="section-heading">
@@ -676,7 +720,6 @@ if confirmed:
                     )
 
 # 6. AI 검색
-
 if ai_jobs:
     # API 요청은 작업 스레드에서 실행한다.
     # 화면은 메인 스레드에서 갱신한다.
@@ -689,15 +732,19 @@ if ai_jobs:
             ): placeholder
             for row, placeholder in ai_jobs
         }
+
         for future in as_completed(futures):
             placeholder = futures[future]
+
             try:
                 result = future.result()
+
             except Exception:
                 show_ai_result(
                     placeholder,
                     state="error",
                 )
+
             else:
                 show_ai_result(
                     placeholder,
