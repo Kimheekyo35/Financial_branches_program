@@ -4,12 +4,13 @@ from difflib import SequenceMatcher
 from html import escape
 from io import StringIO
 
+import logging
 import streamlit as st
 import pandas as pd
 
 from rapidfuzz_file import classify_match, find_bank_code, find_branch_match
 from openai_test import call_openai
-
+from chatbot import openai_chatbot
 # 1. 화면 설정·문구·디자인
 
 input_columns = ["금융기관명", "주소"]
@@ -46,8 +47,8 @@ text = {
     "result_title": "주소 검색 결과",
     "result_count": "총 {count}건",
     "number_header": "No.",
-    "input_header": "내가 확인하려는 주소",
-    "db_header": "프로그램이 찾은 주소",
+    "input_header": "회사 제시 주소",
+    "db_header": "주소 확인 결과",
     "status_header": "검증 결과",
     "ai_title": "AI 검색 결과",
     "ai_waiting": "AI 주소 검색 대기 중...",
@@ -751,3 +752,66 @@ if ai_jobs:
                     state="success",
                     result=result,
                 )
+
+
+@st.dialog("💬 주소 검증 챗봇", width="medium")
+def show_chatbot():
+    st.caption("궁금한 주소에 대해 질문해 주세요.")
+    if "chatbot_messages" not in st.session_state:
+        st.session_state.chatbot_messages = []
+    
+    if st.button("대화 지우기", key="clear_chatbot"):
+        st.session_state.chatbot_messages = []
+
+    with st.container(height=250):
+        for message in st.session_state.chatbot_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+    
+    prompt = st.chat_input("질문을 입력하세요.",key="chatbot_input")
+    if prompt:
+        user_message = {"role":"user", "content":prompt}
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        with st.chat_message("assistant"):
+            try:
+                with st.spinner("답변을 작성하고 있습니다.."):
+                    answer = openai_chatbot(
+                        st.session_state.chatbot_messages + [user_message]
+                    )
+
+            except Exception:
+                logging.getLogger(__name__).exception("주소 검증 챗봇 응담 생성 실패")
+                st.error("답변을 가져오지 못했습니다. 잠시 후 다시 질문해 주세요.")
+            
+            else:
+                st.markdown(answer)
+                st.session_state.chatbot_messages.extend([
+                    user_message,
+                    {"role":"assistant","content":answer}
+                ])
+
+st.markdown(
+    """
+    <style>
+    .st-key-chatbot_launcher {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        width: auto;
+        z-index: 1000;
+    }
+    .st-key-chatbot_launcher button {
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+with st.container(key="chatbot_launcher"):
+    if st.button("💬", key="open_chatbot", help="주소 검증 챗봇 열기"):
+        show_chatbot()
