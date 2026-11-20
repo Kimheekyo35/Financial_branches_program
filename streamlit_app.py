@@ -793,7 +793,7 @@ if ai_jobs:
                 )
 
 
-@st.dialog("💬 주소 검증 챗봇", width="medium")
+@st.dialog("💬 주소 검증 챗봇", width="large")
 def show_chatbot():
     st.caption("궁금한 주소에 대해 질문해 주세요.")
     if "chatbot_messages" not in st.session_state:
@@ -842,15 +842,42 @@ st.markdown(
     }
     .st-key-chatbot_launcher button {
         border-radius: 50%;
-        width: 56px;
-        height: 56px;
-        font-size: 24px;
+        width: 90px;
+        height: 90px;
+        font-size: 40px;
+        background-color: #000;
+        border-color: #000;
+        color: #fff;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        animation: chatbot-float 2.4s ease-in-out infinite;
+    }
+    @keyframes chatbot-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    .st-key-chatbot_launcher button:hover,
+    .st-key-chatbot_launcher button:focus-visible {
+        animation-play-state: paused;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .st-key-chatbot_launcher button {
+            animation: none;
+        }
+    }
+    .st-key-chatbot_launcher button:hover,
+    .st-key-chatbot_launcher button:focus,
+    .st-key-chatbot_launcher button:active {
+        background-color: #000;
+        border-color: #000;
+        color: #fff;
+    }
+    .st-key-chatbot_launcher button p {
+        font-size: 40px;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 with st.container(key="chatbot_launcher"):
-    if st.button("💬", key="open_chatbot", help="주소 검증 챗봇 열기"):
+    if st.button("🤖", key="open_chatbot", help="주소 검증 챗봇 열기"):
         show_chatbot()
