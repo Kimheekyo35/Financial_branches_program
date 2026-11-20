@@ -20,6 +20,12 @@ load_dotenv()
 
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
+# 페이지 이름 (복붙했을 때 나오는 이름)
+st.set_page_config(
+    page_title="금융거래조회서 주소 검증",
+    layout="wide"
+)
+
 # 로그인 과정
 if not APP_PASSWORD:
     st.error("APP_PASSWORD가 설정되어 있지 않습니다. ")
@@ -31,9 +37,11 @@ if "authenticated" not in st.session_state:
 if not st.session_state.authenticated:
     st.title("로그인")
 
-    password = st.text_input("비밀번호", type="password")
+    with st.form("login_form"):
+        password = st.text_input("비밀번호", type="password")
+        submitted = st.form_submit_button("입력")
 
-    if st.button("입력"):
+    if submitted:
         if hmac.compare_digest(password, APP_PASSWORD):
             st.session_state.authenticated = True
             st.rerun()
@@ -42,11 +50,6 @@ if not st.session_state.authenticated:
     
     st.stop()
 
-# 페이지 이름 (복붙했을 때 나오는 이름)
-st.set_page_config(
-    page_title="금융거래조회서 주소 검증",
-    layout="wide"
-)
 
 # 1. 화면 설정·문구·디자인
 input_columns = ["금융기관명", "주소"]
