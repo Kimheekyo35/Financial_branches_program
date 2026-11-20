@@ -41,8 +41,14 @@ if not st.session_state.authenticated:
             st.error("비밀번호가 올바르지 않습니다.")
     
     st.stop()
-# 1. 화면 설정·문구·디자인
 
+# 페이지 이름 (복붙했을 때 나오는 이름)
+st.set_page_config(
+    page_title="금융거래조회서 주소 검증",
+    layout="wide"
+)
+
+# 1. 화면 설정·문구·디자인
 input_columns = ["금융기관명", "주소"]
 text = {
     "title": "금융거래조회서 주소 검증",
